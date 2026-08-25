@@ -1,5 +1,9 @@
 /*
     Emily Hull
+
+    I did not struggle with this really. This was fairly simple. The only issue I had was pushing to the 
+    repository listed in the syllabus. I would like to talk more about this to set me up for success in this
+    class. It seems I do not have the proper permissions to push to the repo or it is privated.
 */
 #include "test_harness.h"
 #include "rectanglefrustrum.h"
