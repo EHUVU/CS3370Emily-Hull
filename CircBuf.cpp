@@ -106,6 +106,10 @@ char CircBuf::get(){
 
     readhead++;
 
+    if(readhead > currCapacity - 1){
+        readhead = 0;
+    }
+
     currSize--;
 
 	return ch;
