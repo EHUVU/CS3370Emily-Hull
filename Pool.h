@@ -54,6 +54,10 @@ Pool<T>::Pool(std::size_t count, bool trace) : _capacity(count)
   {
     free_indices.push_back(i);
   }
+
+  if(trace_enabled){
+    std::cout << "Initializing Object Pool with " << count << " slots (NPC size: (" << sizeof(T) << " bytes)" << std::endl;
+  }
 }
 
 // Destructor
