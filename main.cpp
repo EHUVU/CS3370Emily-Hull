@@ -9,6 +9,12 @@
 #include "Pool.h"
 #include "StockOrder.h"
 
+/*
+    I believe the professor mentioned that the test harness was optional for this assignment, so I did not include this.
+    I edited the main.cpp file to include my other class for the memory pool test "StockOrder". This assignment wasn't too bad except I needed some time to remember
+    how to do template classes. I also needed to read a bit about the alignof(T) since I never used this before. This assignment took a bit longer for me to complete than the previous one.
+*/
+
 //Main test class for Pool and NPC functionality.
 int main(){
 
@@ -47,7 +53,7 @@ int main(){
 
     std::cout << "\n--------------STOCKORDER MEMORY TEST--------------" << std::endl;
     std::vector<StockOrder*> stocks;
-    //StockOrder(const std::string& symbol, const std::string& status, int quantity, int price);
+
     for(int i = 0; i < 6; ++i){
         stocks.push_back(StockOrder::spawn(
            "NVDA", "ACCEPTED", 2, 222.07
