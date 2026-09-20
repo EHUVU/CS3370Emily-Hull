@@ -56,7 +56,7 @@ Pool<T>::Pool(std::size_t count, bool trace) : _capacity(count)
   }
 
   if(trace_enabled){
-    std::cout << "Initializing Object Pool with " << count << " slots (NPC size: (" << sizeof(T) << " bytes)" << std::endl;
+    std::cout << "Initializing Object Pool with " << count << " slots (NPC size: (" << _block_size << " bytes)" << std::endl;
   }
 }
 
