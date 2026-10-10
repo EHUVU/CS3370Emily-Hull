@@ -1,5 +1,7 @@
 #pragma once
 
+//Emily Hull
+
 #include <compare>
 #include <cstddef>
 #include <iosfwd>
@@ -28,6 +30,7 @@ public:
     // --- inspection ---------------------------------------------------
     int operator[](std::size_t i) const;     // i-th decimal digit from the right
     std::size_t digitCount() const;          // 0 has one digit
+    std::size_t digitCap() const;
     bool isNegative() const;
     std::string toString() const;
 

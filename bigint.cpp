@@ -1,3 +1,5 @@
+//Emily Hull
+
 #include "bigint.h"
 #include <iostream>
 #include <regex>
@@ -305,6 +307,11 @@ int BigInt::operator[](std::size_t i) const
 std::size_t BigInt::digitCount() const
 {
     return digits.size();
+}
+
+//Returns the vector capacity.
+std::size_t BigInt::digitCap() const{
+    return digits.capacity();
 }
 
 //Returns the value of negative.
