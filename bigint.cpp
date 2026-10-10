@@ -1,4 +1,4 @@
-//Emily Hull
+// Emily Hull
 
 #include "bigint.h"
 #include <iostream>
@@ -138,7 +138,7 @@ BigInt &BigInt::operator+=(const BigInt &rhs)
     return *this;
 }
 
-//Subtraction operator for this and a rhs BigInt object.
+// Subtraction operator for this and a rhs BigInt object.
 BigInt &BigInt::operator-=(const BigInt &rhs)
 {
     int borrow = 0;
@@ -202,7 +202,7 @@ BigInt &BigInt::operator-=(const BigInt &rhs)
     return *this;
 }
 
-//Multiplication operator for this and a rhs BigInt object.
+// Multiplication operator for this and a rhs BigInt object.
 BigInt &BigInt::operator*=(const BigInt &rhs)
 {
     bool resultNegative = (negative != rhs.negative);
@@ -250,7 +250,7 @@ BigInt &BigInt::operator*=(const BigInt &rhs)
     return *this;
 }
 
-//Unary operator that flips the value of negative.
+// Unary operator that flips the value of negative.
 BigInt BigInt::operator-() const
 {
     BigInt result(*this);
@@ -265,14 +265,14 @@ BigInt BigInt::operator-() const
     return result;
 }
 
-//Increment Bigint operator takes the current instance of BigInt and increments the value.
+// Increment Bigint operator takes the current instance of BigInt and increments the value.
 BigInt &BigInt::operator++()
 {
     *this += BigInt(1);
     return *this;
 }
 
-//Increment Bigint operator takes the current instance of BigInt and increments the value post-increment.
+// Increment Bigint operator takes the current instance of BigInt and increments the value post-increment.
 BigInt BigInt::operator++(int)
 {
     BigInt prev = *this;
@@ -280,14 +280,14 @@ BigInt BigInt::operator++(int)
     return prev;
 }
 
-//Decrement Bigint operator takes the current instance of BigInt and decrements the value.
+// Decrement Bigint operator takes the current instance of BigInt and decrements the value.
 BigInt &BigInt::operator--()
 {
     *this -= BigInt(1);
     return *this;
 }
 
-//Decrement Bigint operator takes the current instance of BigInt and decrements the value post-decrement.
+// Decrement Bigint operator takes the current instance of BigInt and decrements the value post-decrement.
 BigInt BigInt::operator--(int)
 {
     BigInt prev = *this;
@@ -297,30 +297,31 @@ BigInt BigInt::operator--(int)
 
 //-------Inspection
 
-//Checks the current value residing where i is located.
+// Checks the current value residing where i is located.
 int BigInt::operator[](std::size_t i) const
 {
     return digits.at(i);
 }
 
-//Returns the size of the digits vector.
+// Returns the size of the digits vector.
 std::size_t BigInt::digitCount() const
 {
     return digits.size();
 }
 
-//Returns the vector capacity.
-std::size_t BigInt::digitCap() const{
+// Returns the vector capacity.
+std::size_t BigInt::digitCap() const
+{
     return digits.capacity();
 }
 
-//Returns the value of negative.
+// Returns the value of negative.
 bool BigInt::isNegative() const
 {
     return negative;
 }
 
-//Returns the result as a string.
+// Returns the result as a string.
 std::string BigInt::toString() const
 {
     std::string str;
@@ -356,7 +357,7 @@ std::string BigInt::toString() const
 
 //--------Comparison
 
-//Allows two bigints to be compared if equal. 
+// Allows two bigints to be compared if equal.
 bool operator==(const BigInt &a, const BigInt &b)
 {
     if (a.digits == b.digits && a.isNegative() == b.isNegative())
@@ -366,16 +367,56 @@ bool operator==(const BigInt &a, const BigInt &b)
     return false;
 }
 
-//Spaceship operator allows for greater than, less than and equal to comparisons for bigint objects.
+// Spaceship operator allows for greater than, less than and equal to comparisons for bigint objects.
+/*
+Edit to this. My previous implementation was only comparing the size. I need to check the negatives of each value as well otherwise this
+will output incorrectly.
+*/
 std::strong_ordering operator<=>(const BigInt &a, const BigInt &b)
 {
-    if (a.digits.size() > b.digits.size())
+    if (a.negative && !b.negative)
+    {
+        return std::strong_ordering::less;
+    }
+    if (!a.negative && b.negative)
     {
         return std::strong_ordering::greater;
     }
     if (a.digits.size() < b.digits.size())
     {
+        if (a.negative)
+        {
+            return std::strong_ordering::greater;
+        }
         return std::strong_ordering::less;
+    }
+    if (a.digits.size() > b.digits.size())
+    {
+        if (a.negative)
+        {
+            return std::strong_ordering::less;
+        }
+        return std::strong_ordering::greater;
+    }
+    for (std::size_t i = a.digits.size(); i > 0; --i)
+    {
+        if (a.digits[i - 1] > b.digits[i - 1])
+        {
+            if (a.negative)
+            {
+                return std::strong_ordering::less;
+            }
+            return std::strong_ordering::greater;
+        }
+
+        if (a.digits[i - 1] < b.digits[i - 1])
+        {
+            if (a.negative)
+            {
+                return std::strong_ordering::greater;
+            }
+            return std::strong_ordering::less;
+        }
     }
     return std::strong_ordering::equal;
 }
@@ -406,7 +447,7 @@ BigInt operator*(BigInt lhs, const BigInt &rhs)
     return lhs.operator*=(rhs);
 }
 
-//Allows the bigint contents to be output through std::cout.
+// Allows the bigint contents to be output through std::cout.
 std::ostream &operator<<(std::ostream &os, const BigInt &b)
 {
     if (b.isNegative())
