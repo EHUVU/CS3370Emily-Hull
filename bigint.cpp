@@ -98,31 +98,34 @@ BigInt::BigInt(const std::string &s)
         negative = false;
     }
 }
-
+/*
+Bool checks if the size is greater than 1 and the digit at 0 is a 0.
+*/
 BigInt::operator bool() const
 {
-    if (digits.at(0) == 0)
-    {
-        return false;
-    }
-    return true;
+    return !(digits.size() == 1 && digits[0] == 0);
 }
 
 // Addition operator for two BigInt objects.
 BigInt &BigInt::operator+=(const BigInt &rhs)
 {
-    int carry = 0;
-    int value = 0;
-    std::size_t maxsize = std::max(digits.size(), rhs.digits.size());
-
-    if (digits.size() < maxsize)
+    if (negative != rhs.negative)
     {
-        digits.resize(maxsize, 0);
+        BigInt temp(rhs);
+        if (temp)
+        {
+            temp.negative = !temp.negative;
+        }
+        return *this -= temp;
     }
+
+    int carry = 0;
+    std::size_t maxsize = std::max(digits.size(), rhs.digits.size());
+    digits.resize(maxsize, 0);
 
     for (std::size_t i = 0; i < maxsize; ++i)
     {
-        value = digits[i] + carry;
+        int value = digits[i] + carry;
         if (i < rhs.digits.size())
         {
             value += rhs.digits[i];
@@ -138,21 +141,19 @@ BigInt &BigInt::operator+=(const BigInt &rhs)
     return *this;
 }
 
-// Subtraction operator for this and a rhs BigInt object.
-BigInt &BigInt::operator-=(const BigInt &rhs)
+/*
+    Helper function for the operator -=. It was getting massive.
+
+    Subtracts rhs from *this by going through the digit vector. Handles borrow when a digit in *this is smaller than the rhs digit
+    in the same index.
+*/
+void BigInt::subtractHelper(const BigInt &rhs)
 {
     int borrow = 0;
-    int value = 0;
-    std::size_t maxsize = std::max(digits.size(), rhs.digits.size());
 
-    if (digits.size() < maxsize)
+    for (std::size_t i = 0; i < digits.size(); ++i)
     {
-        digits.resize(maxsize, 0);
-    }
-
-    for (std::size_t i = 0; i < maxsize; ++i)
-    {
-        value = digits[i] - borrow;
+        int value = digits[i] - borrow;
         if (i < rhs.digits.size())
         {
             value -= rhs.digits[i];
@@ -166,39 +167,77 @@ BigInt &BigInt::operator-=(const BigInt &rhs)
         {
             borrow = 0;
         }
-
         digits[i] = value;
     }
 
-    if (borrow)
-    {
-        negative = true;
-
-        for (std::size_t i = 0; i < digits.size(); ++i)
-        {
-            digits[i] = 9 - digits[i];
-        }
-
-        for (std::size_t i = 0; i < digits.size(); ++i)
-        {
-            ++digits[i];
-            if (digits[i] < 10)
-            {
-                break;
-            }
-            digits[i] = 0;
-        }
-    }
     while (digits.size() > 1 && digits.back() == 0)
     {
         digits.pop_back();
     }
+}
 
+/*
+    I needed something here to help the subtraction determine which value was larger.
+*/
+int BigInt::compareHelper(const BigInt &rhs) const
+{
+    if (digits.size() > rhs.digits.size())
+    {
+        return 1;
+    }
+    if (digits.size() < rhs.digits.size())
+    {
+        return -1;
+    }
+    for (std::size_t i = digits.size(); i > 0; --i)
+    {
+        if (digits[i - 1] > rhs.digits[i - 1])
+        {
+            return 1;
+        }
+        if (digits[i - 1] < rhs.digits[i - 1])
+        {
+            return -1;
+        }
+    }
+    return 0;
+}
+
+// Subtraction operator for this and a rhs BigInt object.
+BigInt &BigInt::operator-=(const BigInt &rhs)
+{
+    if (negative != rhs.negative)
+    {
+        BigInt temp(rhs);
+        if (temp)
+        {
+            temp.negative = !temp.negative;
+        }
+        return *this += temp;
+    }
+
+    int compare = compareHelper(rhs);
+    if (compare == 0)
+    {
+        digits = {0};
+        negative = false;
+        return *this;
+    }
+    if (compare > 0)
+    {
+        subtractHelper(rhs);
+    }
+    else
+    {
+        BigInt temp(rhs);
+        temp.subtractHelper(*this);
+        digits = temp.digits;
+        negative = !negative;
+    }
     if (digits.size() == 1 && digits[0] == 0)
     {
         negative = false;
     }
-
     return *this;
 }
 
@@ -450,9 +489,5 @@ BigInt operator*(BigInt lhs, const BigInt &rhs)
 // Allows the bigint contents to be output through std::cout.
 std::ostream &operator<<(std::ostream &os, const BigInt &b)
 {
-    if (b.isNegative())
-    {
-        os << '-';
-    }
     return os << b.toString();
 }

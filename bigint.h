@@ -41,6 +41,8 @@ public:
 private:
     // your representation goes here
     std::vector<int> digits;
+    void subtractHelper(const BigInt& rhs);
+    int compareHelper(const BigInt& rhs) const;
     bool negative;
 };
 
