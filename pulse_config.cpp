@@ -214,9 +214,9 @@ std::expected<RawParams, ConfigError> read_raw(std::istream &in)
 
 /*
     validates the parameters in an existing raw struct. If successful, a PulseParams object is created with the
-    validated raw parameters.
+    validated raw parameters. Returns the newly created PulseParams upon success. If it fails, it will return
+    an OutOfRange, NotANumber or a MissingKeys error.
 */
-
 std::expected<PulseParams, ConfigError>
 validate(const RawParams &raw)
 {
@@ -293,7 +293,7 @@ validate(const RawParams &raw)
 }
 
 /*
-Reads input stream and checks if the raw is validated.
+Reads input stream and checks if the raw is validated. Returns rawPass if successful.
 */
 std::expected<PulseParams, ConfigError>
 load_params(std::istream &in)
