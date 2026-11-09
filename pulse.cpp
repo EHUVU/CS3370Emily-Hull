@@ -20,6 +20,8 @@
     I think this assignment was pretty interesting and I think this was a good exercise with using vectors, file reading and algorithms.
     I learned a lot from this and read about the std::filesystem for a bit. I think I did good with using const and references on the 3 vectors that
     are used in main.
+
+    The most difficult part of this assignment I think was calculating the piggyback pulses.
 */
 
 namespace fs = std::filesystem; //I really don't want to write this over and over again.
