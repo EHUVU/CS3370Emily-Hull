@@ -1,8 +1,10 @@
 // pulse.cpp -- CS 3370 Assignment: Validated Config Loader
 // (Given to students as-is; they write pulse_config.cpp.)
-//Emily Hull
+// Emily Hull
 #include "pulse_config.h"
+#include "stage_timer.h"
 #include <exception>
+#include <stdexcept>
 #include <iostream>
 #include <filesystem>
 #include <vector>
@@ -10,7 +12,10 @@
 #include <numeric>
 #include <iterator>
 #include <algorithm>
-
+#include <charconv>
+#include <cctype>
+#include <string>
+#include <limits>
 
 /*
     I added some extra test files here to test the invalid file check.
@@ -24,7 +29,7 @@
     The most difficult part of this assignment I think was calculating the piggyback pulses.
 */
 
-namespace fs = std::filesystem; //I really don't want to write this over and over again.
+namespace fs = std::filesystem; // I really don't want to write this over and over again.
 
 /*
 Computes the area of the unsmooth, negated values. This is intended to be used in the readAndApplyFilters function to calculate the
@@ -32,7 +37,12 @@ area after the pulses are filtered.
 */
 long long computeArea(const std::vector<int> &negatedValues, std::size_t start, std::size_t next, int width)
 {
-    std::size_t end = std::min({start + static_cast<std::size_t>(width), next, negatedValues.size()});
+    if(width <= 0 || start >= negatedValues.size() || next <= start){
+        return 0;
+    }
+
+    std::size_t limit = std::min(next, negatedValues.size());
+    std::size_t end = start + std::min(start + static_cast<std::size_t>(width), limit - start);
     return std::accumulate(
         negatedValues.begin() + start,
         negatedValues.begin() + end,
@@ -48,7 +58,7 @@ std::vector<int> detectPulses(const std::vector<int> &smoothedValues, const int 
 
     for (std::size_t i = 0; i + 2 < smoothedValues.size(); ++i)
     {
-        if (smoothedValues[i + 2] - smoothedValues[i] > vt)
+        if (static_cast<long long>(smoothedValues[i + 2]) - smoothedValues[i] > vt)
         {
             pulses.push_back(static_cast<int>(i));
 
@@ -68,7 +78,7 @@ std::vector<int> detectPulses(const std::vector<int> &smoothedValues, const int 
 */
 void smoothData(const std::vector<int> &negateData, std::vector<int> &smoothData)
 {
-    smoothData.clear();
+    smoothData.resize(negateData.size());
     if (negateData.size() < 7)
     {
         smoothData = negateData;
@@ -78,11 +88,11 @@ void smoothData(const std::vector<int> &negateData, std::vector<int> &smoothData
     std::copy(
         negateData.begin(),
         negateData.begin() + 3,
-        std::back_inserter(smoothData));
+        smoothData.begin());
 
     for (std::size_t i = 3; i < negateData.size() - 3; ++i)
     {
-        int average = (negateData[i - 3] +
+        long long average = (static_cast<long long>(negateData[i - 3]) +
                        2 * negateData[i - 2] +
                        3 * negateData[i - 1] +
                        3 * negateData[i] +
@@ -91,13 +101,17 @@ void smoothData(const std::vector<int> &negateData, std::vector<int> &smoothData
                        negateData[i + 3]) /
                       15;
 
-        smoothData.push_back(average);
+        if(average < std::numeric_limits<int>::min() || average > std::numeric_limits<int>::max()){
+            throw std::overflow_error("Exceeds int range!");
+        }
+
+        smoothData[i] = static_cast<int>(average);
     }
 
     std::copy(
         negateData.end() - 3,
         negateData.end(),
-        std::back_inserter(smoothData));
+        smoothData.end() - 3);
 }
 
 /*
@@ -105,13 +119,10 @@ void smoothData(const std::vector<int> &negateData, std::vector<int> &smoothData
 */
 void negateData(const std::vector<int> &storage, std::vector<int> &negatedValues)
 {
-    negatedValues.clear();
-    std::copy(storage.begin(),
-              storage.end(),
-              std::back_inserter(negatedValues));
+    negatedValues.resize(storage.size());
     std::transform(
-        negatedValues.begin(),
-        negatedValues.end(),
+        storage.begin(),
+        storage.end(),
         negatedValues.begin(),
         std::negate<int>());
 }
@@ -120,27 +131,33 @@ void negateData(const std::vector<int> &storage, std::vector<int> &negatedValues
     Loops through pulse positions and checks if the next pulse is within the delta position. Threshold is calculated but multiplying the
     peak heigh by the drop ratio and excludes the piggyback when detected.
 */
-std::vector<int> piggybackFilter(const std::vector<int> &smoothedValues, const std::vector<int> pulses, const PulseParams &p){
+std::vector<int> piggybackFilter(const std::vector<int> &smoothedValues, const std::vector<int> &pulses, const PulseParams &p)
+{
     std::vector<int> filteredPulses;
 
-    for(std::size_t i = 0; i < pulses.size(); ++i){
+    for (std::size_t i = 0; i < pulses.size(); ++i)
+    {
 
-        if(i + 1 >= pulses.size()){
+        if (i + 1 >= pulses.size())
+        {
             filteredPulses.push_back(pulses[i]);
             continue;
         }
 
         std::size_t start = pulses[i];
         std::size_t next = pulses[i + 1];
-        if(next - start > static_cast<std::size_t>(p.pulse_delta)){
+        if (next - start > static_cast<std::size_t>(p.pulse_delta))
+        {
             filteredPulses.push_back(pulses[i]);
             continue;
         }
 
         std::size_t end = next;
         std::size_t peak = start;
-        for(std::size_t j = start + 1; j < end; ++j){
-            if(smoothedValues[j] > smoothedValues[peak]){
+        for (std::size_t j = start + 1; j < end; ++j)
+        {
+            if (smoothedValues[j] > smoothedValues[peak])
+            {
                 peak = j;
             }
         }
@@ -148,15 +165,20 @@ std::vector<int> piggybackFilter(const std::vector<int> &smoothedValues, const s
         double threshold = smoothedValues[peak] * p.drop_ratio;
 
         int below = 0;
-        for(std::size_t j = peak + 1; j < end; ++j){
-            if(smoothedValues[j] < threshold){
+        for (std::size_t j = peak + 1; j < end; ++j)
+        {
+            if (smoothedValues[j] < threshold)
+            {
                 ++below;
             }
         }
 
-        if(below > p.below_drop_ratio){
+        if (below > p.below_drop_ratio)
+        {
             std::cout << "Found piggyback at " << start << std::endl;
-        }else{
+        }
+        else
+        {
             filteredPulses.push_back(pulses[i]);
         }
     }
@@ -187,8 +209,6 @@ void readAndApplyFilters(const fs::path &folder, std::vector<int> &storage, std:
             continue;
         }
 
-        storage.clear();
-
         std::cout << entry.path() << "\n";
         std::ifstream file(entry.path());
         if (!file)
@@ -197,18 +217,75 @@ void readAndApplyFilters(const fs::path &folder, std::vector<int> &storage, std:
             continue;
         }
 
-        storage.assign(
-            std::istream_iterator<int>(file),
-            std::istream_iterator<int>());
+        bool isInvalid = false;
 
-        negateData(storage, negatedValues);
+        // Timer 1
+        {
+            StageTimer timer{"reading"};
 
-        smoothData(negatedValues, smoothedValues);
+            std::string data(
+                (std::istreambuf_iterator<char>(file)),
+                std::istreambuf_iterator<char>());
 
-        std::vector<int> pulses = detectPulses(smoothedValues, p.vt);
+            const char *current = data.data();
+            const char *end = current + data.size();
 
-        std::vector<int> filteredPulses = piggybackFilter(smoothedValues, pulses, p);
+            storage.clear();
 
+            while (current < end)
+            {
+                while (current < end && std::isspace(static_cast<unsigned char>(*current)))
+                {
+                    ++current;
+                }
+                if (current == end)
+                {
+                    break;
+                }
+
+                int value;
+                auto [next, error] = std::from_chars(current, end, value);
+
+                if (error != std::errc{})
+                {
+                    isInvalid = true;
+                    break;
+                }
+
+                if(next < end && !std::isspace(static_cast<unsigned char>(*next))){
+                    isInvalid = true;
+                    break;
+                }
+                storage.push_back(value);
+                current = next;
+            }
+            if(isInvalid){
+                std::cout << "Invalid data: " << entry.path() << std::endl;
+                continue;
+            }
+        }
+        // Timer 2
+        {
+            StageTimer timer{"negated"};
+            negateData(storage, negatedValues);
+        }
+        // Timer 3
+        {
+            StageTimer timer{"smoothing"};
+            smoothData(negatedValues, smoothedValues);
+        }
+        // Timer 4
+        std::vector<int> pulses;
+        {
+            StageTimer timer{"detection"};
+            pulses = detectPulses(smoothedValues, p.vt);
+        }
+        // Timer 5
+        std::vector<int> filteredPulses;
+        {
+            StageTimer timer{"piggyback"};
+            filteredPulses = piggybackFilter(smoothedValues, pulses, p);
+        }
         for (std::size_t i = 0; i < filteredPulses.size(); ++i)
         {
             std::size_t start = filteredPulses[i];
@@ -221,12 +298,16 @@ void readAndApplyFilters(const fs::path &folder, std::vector<int> &storage, std:
             {
                 next = negatedValues.size();
             }
-
-            long long area = computeArea(
-                negatedValues,
-                start,
-                next,
-                p.width);
+            // Timer 6
+            long long area;
+            {
+                StageTimer timer{"area"};
+                area = computeArea(
+                    negatedValues,
+                    start,
+                    next,
+                    p.width);
+            }
 
             std::cout << start << " (" << area << ") " << std::endl;
         }
@@ -260,6 +341,8 @@ int main(int argc, char *argv[])
         std::vector<int> negatedValues;
         std::vector<int> smoothedValues;
         readAndApplyFilters(folder, storage, negatedValues, smoothedValues, p);
+        StageTimer::print_stage_report();
+        // Time ONLY the 02 build
     }
     catch (const ConfigFileError &e)
     { // our errors first
